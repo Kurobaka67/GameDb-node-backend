@@ -1,12 +1,8 @@
 function createFilter(query){
     var filter = {};
-    if(query.title){
-        filter.title = { $regex: ".*"+query.title+".*", $options: 'i' };
+    if(query.name){
+        filter.name = { $regex: ".*"+query.name+".*", $options: 'i' };
     }
-    if(query.rating){
-        filter.rating = { $gt: parseInt(query.rating) };
-    }
-    console.log(filter);
     return filter;
 }
 
@@ -35,82 +31,62 @@ module.exports = router => {
      * @swagger
      *
      * definitions:
-     *   NewGame:
+     *   NewPlatform:
      *      type: object
      *      properties:
-     *          title:
+     *          name:
      *             type: string
-     *             description: game's title
-     *             example: Zelda
+     *             description: platform's title
+     *             example: PC
      *          image:
      *              type: string
-     *              description: image url of the game
+     *              description: image url of the platform
      *              example: http://urlimage.jpg
-     *          rating:
-     *              type: integer
-     *              description: game's rating between 0 and 100
-     *              example: 42
-     *          release:
+     *          date:
      *              type: string
-     *              description: game's release date
+     *              description: platform's release date
      *              example: 2000-04-15
-     *          platforms:
-     *              type: array of string
-     *              description: platforms supported by the game
-     *              example: [PC, Nintendo Switch]
      *          description:
      *              type: string
-     *              description: game's description
-     *              example: "In this game, ..."
-     *          publisher:
-     *              type: array
-     *              description: game's publisher
-     *              example: Nintendo
-     *          genres:
-     *              type: array of string
-     *              description: all game's genres
-     *              example: [Adventure, Indie, Strategy]
-     *          status:
-     *              type: string
-     *              description: game's status
-     *              example: AVAILABLE
-     *   Game:
+     *              description: platform's description
+     *              example: "This platform, ..."
+     *   Platform:
      *      allOf:
      *          - properties:
      *              _id:
      *                  type: string
-     *          - $ref: '#/definitions/NewGame'
+     *          - $ref: '#/definitions/NewPlatform'
      *          
      */
 
     // This section will help you get a list of all the documents.
     /**
      * @swagger
-     * /games:
+     * /platforms:
      *   get:
-     *     summary: Retrieve a list of games
+     *     summary: Retrieve a list of platforms
      *     tags:
-     *      - games
-     *     description: Retrieve a list of games.
+     *      - platforms
+     *     description: Retrieve a list of platforms.
      *     responses:
      *       200:
-     *         description: A list of games.
+     *         description: A list of platforms.
      *         content: 
      *          application/json:
      *             schema:
-     *               $ref: '#/definitions/Game'
+     *               $ref: '#/definitions/Platform'
      */
-    router.route("/games").get(async function (req, res) {
+    router.route("/platforms").get(async function (req, res) {
         const dbConnect = dbo.getDb();
         
         dbConnect
-        .collection("games")
+        .collection("platforms")
         .find(createFilter(req.query))
         .sort(sortedBy(req.query))
         .skip(parseInt(req.query.skip)).limit(parseInt(req.query.limit))
         .toArray(function (err, result) {
             if (err || !result) {
-            res.status(400).send("Error fetching game!");
+            res.status(400).send("Error fetching platform!");
         } else {
             res.json(result);
             }
@@ -119,28 +95,28 @@ module.exports = router => {
 
     /**
      * @swagger
-     * /games/count:
+     * /platforms/count:
      *   get:
-     *     summary: Retrieve the number of games
+     *     summary: Retrieve the number of platforms
      *     tags:
-     *      - games
-     *     description: Retrieve the number of games.
+     *      - platforms
+     *     description: Retrieve the number of platforms.
      *     responses:
      *       200:
-     *         description: The number of games.
+     *         description: The number of platforms.
      *         content: 
      *          text/plain:
      *             schema:
      *               status:
      *                  type: integer
-     *                  description: game's number
+     *                  description: platform's number
      *                  example: 12
      */
-    router.get("/games/count", async function (req, res) {
+    router.get("/platforms/count", async function (req, res) {
         const dbConnect = dbo.getDb();
 
         dbConnect
-        .collection("games")
+        .collection("platforms")
         .count( {}, function(err, result){
 
             if(err){
@@ -155,36 +131,36 @@ module.exports = router => {
 
     /**
      * @swagger
-     * /games/{id}:
+     * /platforms/{id}:
      *   get:
-     *     summary: Retrieve a game
+     *     summary: Retrieve a platform
      *     tags:
-     *      - games
-     *     description: Retrieve a game by id.
+     *      - platforms
+     *     description: Retrieve a platform by id.
      *     parameters:
      *       - in: path
      *         name: id
      *         required: true
-     *         description: Numeric ID of the game to retrieve.
+     *         description: Numeric ID of the platform to retrieve.
      *         schema:
      *           type: string
      *     responses:
      *       200:
-     *         description: A game.
+     *         description: A platform.
      *         content: 
      *          application/json:
      *             schema:
-     *               $ref: '#/definitions/Game'
+     *               $ref: '#/definitions/Platform'
      */
-    router.route("/games/:id").get(async function (req, res) {
+    router.route("/platforms/:id").get(async function (req, res) {
         const dbConnect = dbo.getDb();
     
         dbConnect
-        .collection("games")
+        .collection("platforms")
         .findOne({"_id": ObjectId(req.params.id)},
         function (err, result) {
             if (err || !result) {
-            res.status(400).send("Error fetching game!");
+            res.status(400).send("Error fetching platform!");
         } else {
             res.json(result);
             }
@@ -192,17 +168,17 @@ module.exports = router => {
     });
     /**
      * @swagger
-     * /games/{id}:
+     * /platforms/{id}:
      *   delete:
-     *     summary: delete a game
+     *     summary: delete a platform
      *     tags:
-     *      - games
-     *     description: delete a game by id.
+     *      - platforms
+     *     description: delete a platform by id.
      *     parameters:
      *       - in: path
      *         name: id
      *         required: true
-     *         description: Numeric ID of the game to delete.
+     *         description: Numeric ID of the platform to delete.
      *         schema:
      *           type: string
      *     responses:
@@ -212,15 +188,15 @@ module.exports = router => {
      *          application/json:
      *             schema: 
      */
-    router.route("/games/:id").delete(async function (req, res) {
+    router.route("/platforms/:id").delete(async function (req, res) {
         const dbConnect = dbo.getDb();
     
         dbConnect
-        .collection("games")
+        .collection("platforms")
         .deleteOne({"_id": ObjectId(req.params.id)},
         function (err, result) {
         if (err || !result) {
-            res.status(400).send("Error deleting game!");
+            res.status(400).send("Error deleting platform!");
         } else {
             res.json(result);
         }
@@ -228,35 +204,35 @@ module.exports = router => {
     });
     /**
      * @swagger
-     * /games:
+     * /platforms:
      *   post:
-     *     summary: create a game
+     *     summary: create a platform
      *     tags:
-     *      - games
-     *     description: create a new game.
+     *      - platforms
+     *     description: create a new platform.
      *     requestBody:
      *       required: true
      *       content:
      *         application/json:
      *           schema:
-     *               $ref: '#/definitions/NewGame'
+     *               $ref: '#/definitions/NewPlatform'
      *     responses:
      *       200:
      *         description: result of creation.
      *         content: 
      *          application/json:
      *             schema:
-     *               $ref: '#/definitions/Game'
+     *               $ref: '#/definitions/Platform'
      */
-    router.route("/games").post(async function (req, res) {
+    router.route("/platforms").post(async function (req, res) {
         const dbConnect = dbo.getDb();
     
         dbConnect
-        .collection("games")
+        .collection("platforms")
         .insertOne(req.body,
         function (err, result) {
         if (err || !result) {
-            res.status(400).send("Error deleting game!");
+            res.status(400).send("Error deleting platform!");
         } else {
             res.json(result);
         }
@@ -264,17 +240,17 @@ module.exports = router => {
     });
     /**
      * @swagger
-     * /games/{id}:
+     * /platforms/{id}:
      *   put:
-     *     summary: update a game
+     *     summary: update a platform
      *     tags:
-     *      - games
-     *     description: update a game.
+     *      - platforms
+     *     description: update a platform.
      *     parameters:
      *       - in: path
      *         name: id
      *         required: true
-     *         description: Numeric ID of the game to delete.
+     *         description: Numeric ID of the platform to delete.
      *         schema:
      *           type: string
      *     requestBody:
@@ -282,24 +258,24 @@ module.exports = router => {
      *       content:
      *         application/json:
      *           schema:
-     *               $ref: '#/definitions/NewGame'
+     *               $ref: '#/definitions/NewPlatform'
      *     responses:
      *       200:
      *         description: result of update.
      *         content: 
      *          application/json:
      *             schema:
-     *               $ref: '#/definitions/Game'
+     *               $ref: '#/definitions/Platform'
      */
-    router.route("/games/:id").put(async function (req, res) {
+    router.route("/platforms/:id").put(async function (req, res) {
         const dbConnect = dbo.getDb();
 
         dbConnect
-        .collection("games")
+        .collection("platforms")
         .updateOne({"_id": ObjectId(req.params.id)}, {$set: req.body},
         function (err, result) {
         if (err || !result) {
-            res.status(400).send("Error deleting game!");
+            res.status(400).send("Error deleting platform!");
         } else {
             res.json(result);
         }
@@ -308,4 +284,3 @@ module.exports = router => {
 
     
 }
-

@@ -51,6 +51,8 @@ app.get('/', (req, res) => {
 })
 
 require('./routes/games')(router);
+require('./routes/platforms')(router);
+require('./routes/users')(router);
 
 app.use(router);
 
