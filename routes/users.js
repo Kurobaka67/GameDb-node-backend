@@ -1,4 +1,33 @@
-module.exports = router => {
+const uuidv4 = require('uuid').v4;
+const sha256 = require("js-sha256").sha256;
+
+
+function decodeBasicAuthentification(key) {
+    key = key.split(" ")[1];
+    const buff = Buffer.from(key, 'base64');
+    const str = buff.toString('utf-8');
+    const token = str.split(":");
+    return {email: token[0], password: sha256(token[1]).toUpperCase()};
+}
+function loginFilter(body) {
+    
+    var filter = {};
+    if(body.email){
+        filter.email = body.email;
+    }
+    else{
+        return null;
+    }
+    if(body.password){
+        filter.password = sha256(body.password).toUpperCase();
+    }
+    else{
+        return null;
+    }
+    return filter;
+}
+
+module.exports = (router, passport) => {
     // recordRoutes is an instance of the express router.
     // We use it to define our routes.
     // The router will be added as a middleware and will take control of requests starting with path /listings.
@@ -40,7 +69,7 @@ module.exports = router => {
     // This section will help you get a list of all the documents.
     /**
      * @swagger
-     * /users:
+     * /api/v1/users:
      *   get:
      *     summary: Retrieve a list of Users
      *     tags:
@@ -54,7 +83,7 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/User'
      */
-    router.route("/users").get(async function (req, res) {
+    router.route("/api/v1/users").get(async function (req, res) {
         const dbConnect = dbo.getDb();
         
         dbConnect
@@ -71,7 +100,7 @@ module.exports = router => {
 
     /**
      * @swagger
-     * /users/count:
+     * /api/v1/users/count:
      *   get:
      *     summary: Retrieve the number of users
      *     tags:
@@ -88,7 +117,7 @@ module.exports = router => {
      *                  description: user's number
      *                  example: 12
      */
-    router.get("/users/count", async function (req, res) {
+    router.get("/api/v1/users/count", async function (req, res) {
         const dbConnect = dbo.getDb();
 
         dbConnect
@@ -105,9 +134,51 @@ module.exports = router => {
        })
     });
 
+    router.route("/api/v1/users/login").post(async function (req, res) {
+        const dbConnect = dbo.getDb();
+        const filter = loginFilter(req.body);
+        //const filter = decodeBasicAuthentification(req.headers.authorization);
+
+        if(filter){
+            dbConnect
+            .collection("users")
+            .find(filter)
+            .toArray(function(err, result){
+                console.log(result);
+                if(err){
+                    res.send(err);
+                }
+                else{
+                    if(result.length > 0){
+                        const user = result[0];
+                        user.key = uuidv4()
+                        dbConnect
+                        .collection("users")
+                        .updateOne({"_id": user._id}, {$set: user},
+                        function (err, result) {
+                        if (err || !result) {
+                            res.status(401).send("Bad login");
+                        } else {
+                            //req.session.user = user._id;
+                            res.json(user);
+                        }
+                        });
+                    }
+                    else{
+                        res.status(401).send("Bad login");
+                    }
+                }
+        
+           })
+        }
+        else{
+            res.status(401).send("Bad login");
+        }
+    });
+
     /**
      * @swagger
-     * /users/{id}:
+     * /api/v1/users/{id}:
      *   get:
      *     summary: Retrieve a User
      *     tags:
@@ -128,7 +199,7 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/User'
      */
-    router.route("/users/:id").get(async function (req, res) {
+    router.route("/api/v1/users/:id").get(async function (req, res) {
         const dbConnect = dbo.getDb();
     
         dbConnect
@@ -144,7 +215,7 @@ module.exports = router => {
     });
     /**
      * @swagger
-     * /users/{id}:
+     * /api/v1/users/{id}:
      *   delete:
      *     summary: delete a User
      *     tags:
@@ -164,7 +235,7 @@ module.exports = router => {
      *          application/json:
      *             schema: 
      */
-    router.route("/users/:id").delete(async function (req, res) {
+    router.route("/api/v1/users/:id").delete(async function (req, res) {
         const dbConnect = dbo.getDb();
     
         dbConnect
@@ -180,7 +251,7 @@ module.exports = router => {
     });
     /**
      * @swagger
-     * /users:
+     * /api/v1/users:
      *   post:
      *     summary: create a User
      *     tags:
@@ -200,7 +271,7 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/User'
      */
-    router.route("/users").post(async function (req, res) {
+    router.route("/api/v1/users").post(async function (req, res) {
         const dbConnect = dbo.getDb();
     
         dbConnect
@@ -208,7 +279,7 @@ module.exports = router => {
         .insertOne(req.body,
         function (err, result) {
         if (err || !result) {
-            res.status(400).send("Error deleting User!");
+            res.status(400).send("Error creating User!");
         } else {
             res.json(result);
         }
@@ -216,7 +287,7 @@ module.exports = router => {
     });
     /**
      * @swagger
-     * /users/{id}:
+     * /api/v1/users/{id}:
      *   put:
      *     summary: update a User
      *     tags:
@@ -243,7 +314,7 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/User'
      */
-    router.route("/users/:id").put(async function (req, res) {
+    router.route("/api/v1/users/:id").put(async function (req, res) {
         const dbConnect = dbo.getDb();
 
         dbConnect
@@ -251,12 +322,14 @@ module.exports = router => {
         .updateOne({"_id": ObjectId(req.params.id)}, {$set: req.body},
         function (err, result) {
         if (err || !result) {
-            res.status(400).send("Error deleting User!");
+            res.status(400).send("Error updating User!");
         } else {
             res.json(result);
         }
         });
     });
+
+    
 
     
 }

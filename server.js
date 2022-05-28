@@ -2,11 +2,26 @@ const express = require('express')
 const cors = require('cors');
 const swaggerJSDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const passport = require('passport');
+const Strategy = require('passport-http-bearer').Strategy;
+const dbo = require('./db/conn.js')
+//const cookieParser = require('cookie-parser');
+//const session = require('express-session');
+
+passport.use(new Strategy(
+  function(token, cb) {
+    const dbConnect = dbo.getDb();
+    dbConnect.collection('users').findOne({token: token}, function(err, user) {
+      if (err) { return cb(err); }
+      if (!user) { return cb(null, false); }
+      return cb(null, user);
+    });
+  }));
+
 const app = express()
 const port = 3000
 
 const router = express.Router();
-const dbo = require('./db/conn.js')
 const bodyParser = require('body-parser');
 
 const swaggerDefinition = {
@@ -41,8 +56,15 @@ const options = {
 
 const swaggerSpec = swaggerJSDoc(options);
 
+const corsOptions = {
+  origin: 'http://localhost:8080',
+  credentials : true
+}
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.use(cors());
+app.use(cors(corsOptions));
+//app.use(cookieParser());
+//app.use(session({secret: "Shh, its a secret!"}));
 app.use(bodyParser.json());
 dbo.connectToServer(console.log)
 
@@ -50,9 +72,9 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-require('./routes/games')(router);
-require('./routes/platforms')(router);
-require('./routes/users')(router);
+require('./routes/games')(router, passport);
+require('./routes/platforms')(router, passport);
+require('./routes/users')(router, passport);
 
 app.use(router);
 

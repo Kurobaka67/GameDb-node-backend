@@ -1,30 +1,30 @@
-function createFilter(query){
+function createFilter(query) {
     var filter = {};
-    if(query.title){
-        filter.title = { $regex: ".*"+query.title+".*", $options: 'i' };
+    if (query.title) {
+        filter.title = { $regex: ".*" + query.title + ".*", $options: 'i' };
     }
-    if(query.rating){
+    if (query.rating) {
         filter.rating = { $gt: parseInt(query.rating) };
     }
     console.log(filter);
     return filter;
 }
 
-function sortedBy(query){
+function sortedBy(query) {
     var sort = {};
-    if(query.sortedBy){
+    if (query.sortedBy) {
         query.sortedBy.split(",").forEach(s => {
             const token = s.split("|");
-            if(token.length > 1){
+            if (token.length > 1) {
                 sort[token[0]] = token[1];
             }
         });
     }
-    
+
     return sort;
 }
 
-module.exports = router => {
+module.exports = (router, passport) => {
     // recordRoutes is an instance of the express router.
     // We use it to define our routes.
     // The router will be added as a middleware and will take control of requests starting with path /listings.
@@ -86,7 +86,7 @@ module.exports = router => {
     // This section will help you get a list of all the documents.
     /**
      * @swagger
-     * /games:
+     * /api/v1/games:
      *   get:
      *     summary: Retrieve a list of games
      *     tags:
@@ -100,26 +100,26 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/Game'
      */
-    router.route("/games").get(async function (req, res) {
+    router.route("/api/v1/games").get(async function (req, res) {
         const dbConnect = dbo.getDb();
-        
+
         dbConnect
-        .collection("games")
-        .find(createFilter(req.query))
-        .sort(sortedBy(req.query))
-        .skip(parseInt(req.query.skip)).limit(parseInt(req.query.limit))
-        .toArray(function (err, result) {
-            if (err || !result) {
-            res.status(400).send("Error fetching game!");
-        } else {
-            res.json(result);
-            }
-        });
+            .collection("games")
+            .find(createFilter(req.query))
+            .sort(sortedBy(req.query))
+            .skip(parseInt(req.query.skip)).limit(parseInt(req.query.limit))
+            .toArray(function (err, result) {
+                if (err || !result) {
+                    res.status(400).send("Error fetching game!");
+                } else {
+                    res.json(result);
+                }
+            });
     });
 
     /**
      * @swagger
-     * /games/count:
+     * /api/v1/games/count:
      *   get:
      *     summary: Retrieve the number of games
      *     tags:
@@ -136,26 +136,26 @@ module.exports = router => {
      *                  description: game's number
      *                  example: 12
      */
-    router.get("/games/count", async function (req, res) {
+    router.get("/api/v1/games/count", async function (req, res) {
         const dbConnect = dbo.getDb();
 
         dbConnect
-        .collection("games")
-        .count( {}, function(err, result){
+            .collection("games")
+            .count({}, function (err, result) {
 
-            if(err){
-                res.send(err)
-            }
-            else{
-                res.json(result)
-            }
-    
-       })
+                if (err) {
+                    res.send(err)
+                }
+                else {
+                    res.json(result)
+                }
+
+            })
     });
 
     /**
      * @swagger
-     * /games/{id}:
+     * /api/v1/games/{id}:
      *   get:
      *     summary: Retrieve a game
      *     tags:
@@ -176,23 +176,23 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/Game'
      */
-    router.route("/games/:id").get(async function (req, res) {
+    router.route("/api/v1/games/:id").get(async function (req, res) {
         const dbConnect = dbo.getDb();
-    
+
         dbConnect
-        .collection("games")
-        .findOne({"_id": ObjectId(req.params.id)},
-        function (err, result) {
-            if (err || !result) {
-            res.status(400).send("Error fetching game!");
-        } else {
-            res.json(result);
-            }
-        });
+            .collection("games")
+            .findOne({ "_id": ObjectId(req.params.id) },
+                function (err, result) {
+                    if (err || !result) {
+                        res.status(400).send("Error fetching game!");
+                    } else {
+                        res.json(result);
+                    }
+                });
     });
     /**
      * @swagger
-     * /games/{id}:
+     * /api/v1/games/{id}:
      *   delete:
      *     summary: delete a game
      *     tags:
@@ -212,23 +212,48 @@ module.exports = router => {
      *          application/json:
      *             schema: 
      */
-    router.route("/games/:id").delete(async function (req, res) {
+    router.route("/api/v1/games/:id").delete(async function (req, res) {
         const dbConnect = dbo.getDb();
-    
-        dbConnect
-        .collection("games")
-        .deleteOne({"_id": ObjectId(req.params.id)},
-        function (err, result) {
-        if (err || !result) {
-            res.status(400).send("Error deleting game!");
-        } else {
-            res.json(result);
+        let key = req.headers.authorization;
+        //let key = req.session.user;
+
+        if (key) {
+            key = key.split(" ")[1];
+            dbConnect
+                .collection("users")
+                .findOne({ "key": key },
+                    function (err, result) {
+                        if (err || !result) {
+                            res.status(400).send("Error fetching User!");
+                        } else {
+                            if (result.role == 'Admin') {
+                                dbConnect
+                                    .collection("games")
+                                    .deleteOne({ "_id": ObjectId(req.params.id) },
+                                        function (err, result) {
+                                            if (err || !result) {
+                                                res.status(400).send("Error deleting game!");
+                                            } else {
+                                                res.json(result);
+                                            }
+                                        });
+                            }
+                            else{
+                                res.status(403).send("Not authorize!");
+                            }
+
+                        }
+                    });
+
         }
-        });
+        else {
+            res.status(400).send("Error deleting game!");
+        }
+
     });
     /**
      * @swagger
-     * /games:
+     * /api/v1/games:
      *   post:
      *     summary: create a game
      *     tags:
@@ -248,23 +273,23 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/Game'
      */
-    router.route("/games").post(async function (req, res) {
+    router.route("/api/v1/games").post(async function (req, res) {
         const dbConnect = dbo.getDb();
-    
+
         dbConnect
-        .collection("games")
-        .insertOne(req.body,
-        function (err, result) {
-        if (err || !result) {
-            res.status(400).send("Error deleting game!");
-        } else {
-            res.json(result);
-        }
-        });
+            .collection("games")
+            .insertOne(req.body,
+                function (err, result) {
+                    if (err || !result) {
+                        res.status(400).send("Error deleting game!");
+                    } else {
+                        res.json(result);
+                    }
+                });
     });
     /**
      * @swagger
-     * /games/{id}:
+     * /api/v1/games/{id}:
      *   put:
      *     summary: update a game
      *     tags:
@@ -291,21 +316,21 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/Game'
      */
-    router.route("/games/:id").put(async function (req, res) {
+    router.route("/api/v1/games/:id").put(async function (req, res) {
         const dbConnect = dbo.getDb();
 
         dbConnect
-        .collection("games")
-        .updateOne({"_id": ObjectId(req.params.id)}, {$set: req.body},
-        function (err, result) {
-        if (err || !result) {
-            res.status(400).send("Error deleting game!");
-        } else {
-            res.json(result);
-        }
-        });
+            .collection("games")
+            .updateOne({ "_id": ObjectId(req.params.id) }, { $set: req.body },
+                function (err, result) {
+                    if (err || !result) {
+                        res.status(400).send("Error deleting game!");
+                    } else {
+                        res.json(result);
+                    }
+                });
     });
 
-    
+
 }
 

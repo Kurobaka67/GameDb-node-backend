@@ -20,7 +20,7 @@ function sortedBy(query){
     return sort;
 }
 
-module.exports = router => {
+module.exports = (router, passport) => {
     // recordRoutes is an instance of the express router.
     // We use it to define our routes.
     // The router will be added as a middleware and will take control of requests starting with path /listings.
@@ -62,7 +62,7 @@ module.exports = router => {
     // This section will help you get a list of all the documents.
     /**
      * @swagger
-     * /platforms:
+     * /api/v1/platforms:
      *   get:
      *     summary: Retrieve a list of platforms
      *     tags:
@@ -76,7 +76,7 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/Platform'
      */
-    router.route("/platforms").get(async function (req, res) {
+    router.route("/api/v1/platforms").get(async function (req, res) {
         const dbConnect = dbo.getDb();
         
         dbConnect
@@ -95,7 +95,7 @@ module.exports = router => {
 
     /**
      * @swagger
-     * /platforms/count:
+     * /api/v1/platforms/count:
      *   get:
      *     summary: Retrieve the number of platforms
      *     tags:
@@ -112,7 +112,7 @@ module.exports = router => {
      *                  description: platform's number
      *                  example: 12
      */
-    router.get("/platforms/count", async function (req, res) {
+    router.get("/api/v1/platforms/count", async function (req, res) {
         const dbConnect = dbo.getDb();
 
         dbConnect
@@ -131,7 +131,7 @@ module.exports = router => {
 
     /**
      * @swagger
-     * /platforms/{id}:
+     * /api/v1/platforms/{id}:
      *   get:
      *     summary: Retrieve a platform
      *     tags:
@@ -152,7 +152,7 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/Platform'
      */
-    router.route("/platforms/:id").get(async function (req, res) {
+    router.route("/api/v1/platforms/:id").get(async function (req, res) {
         const dbConnect = dbo.getDb();
     
         dbConnect
@@ -168,7 +168,7 @@ module.exports = router => {
     });
     /**
      * @swagger
-     * /platforms/{id}:
+     * /api/v1/platforms/{id}:
      *   delete:
      *     summary: delete a platform
      *     tags:
@@ -188,7 +188,7 @@ module.exports = router => {
      *          application/json:
      *             schema: 
      */
-    router.route("/platforms/:id").delete(async function (req, res) {
+    router.route("/api/v1/platforms/:id").delete(async function (req, res) {
         const dbConnect = dbo.getDb();
     
         dbConnect
@@ -204,7 +204,7 @@ module.exports = router => {
     });
     /**
      * @swagger
-     * /platforms:
+     * /api/v1/platforms:
      *   post:
      *     summary: create a platform
      *     tags:
@@ -224,7 +224,7 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/Platform'
      */
-    router.route("/platforms").post(async function (req, res) {
+    router.route("/api/v1/platforms").post(async function (req, res) {
         const dbConnect = dbo.getDb();
     
         dbConnect
@@ -240,7 +240,7 @@ module.exports = router => {
     });
     /**
      * @swagger
-     * /platforms/{id}:
+     * /api/v1/platforms/{id}:
      *   put:
      *     summary: update a platform
      *     tags:
@@ -267,7 +267,7 @@ module.exports = router => {
      *             schema:
      *               $ref: '#/definitions/Platform'
      */
-    router.route("/platforms/:id").put(async function (req, res) {
+    router.route("/api/v1/platforms/:id").put(async function (req, res) {
         const dbConnect = dbo.getDb();
 
         dbConnect
