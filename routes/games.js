@@ -6,7 +6,6 @@ function createFilter(query) {
     if (query.rating) {
         filter.rating = { $gt: parseInt(query.rating) };
     }
-    console.log(filter);
     return filter;
 }
 
@@ -24,6 +23,7 @@ function sortedBy(query) {
     return sort;
 }
 
+const allowedRoles = ['Admin', 'Contributor'];
 module.exports = (router, passport) => {
     // recordRoutes is an instance of the express router.
     // We use it to define our routes.
@@ -100,9 +100,8 @@ module.exports = (router, passport) => {
      *             schema:
      *               $ref: '#/definitions/Game'
      */
-    router.route("/api/v1/games").get(async function (req, res) {
+    router.route("/api/v1/games").get(async function (req, res, next) {
         const dbConnect = dbo.getDb();
-
         dbConnect
             .collection("games")
             .find(createFilter(req.query))
@@ -212,11 +211,34 @@ module.exports = (router, passport) => {
      *          application/json:
      *             schema: 
      */
-    router.route("/api/v1/games/:id").delete(async function (req, res) {
+    router.route("/api/v1/games/:id").delete(async function (req, res, next) {
         const dbConnect = dbo.getDb();
         let key = req.headers.authorization;
         //let key = req.session.user;
-
+        passport.authenticate("bearer", (err, user, info) => {
+            if (err) {
+                res.status(400).send("Error during authentication!");
+            }
+            if (!user) {
+                res.status(401).send("Not authenticated!");
+            }
+            if (user.role == 'Admin') {
+                dbConnect
+                    .collection("games")
+                    .deleteOne({ "_id": ObjectId(req.params.id) },
+                        function (err, result) {
+                            if (err || !result) {
+                                res.status(400).send("Error deleting game!");
+                            } else {
+                                res.json(result);
+                            }
+                        });
+            }
+            else{
+                res.status(403).send("Not authorize!");
+            }
+        })(req, res, next);
+        /*
         if (key) {
             key = key.split(" ")[1];
             dbConnect
@@ -249,6 +271,7 @@ module.exports = (router, passport) => {
         else {
             res.status(400).send("Error deleting game!");
         }
+        */
 
     });
     /**
@@ -273,19 +296,33 @@ module.exports = (router, passport) => {
      *             schema:
      *               $ref: '#/definitions/Game'
      */
-    router.route("/api/v1/games").post(async function (req, res) {
+    router.route("/api/v1/games").post(async function (req, res, next) {
         const dbConnect = dbo.getDb();
-
-        dbConnect
-            .collection("games")
-            .insertOne(req.body,
-                function (err, result) {
-                    if (err || !result) {
-                        res.status(400).send("Error deleting game!");
-                    } else {
-                        res.json(result);
-                    }
-                });
+        let key = req.headers.authorization;
+        
+        passport.authenticate("bearer", (err, user, info) => {
+            if (err) {
+                res.status(400).send("Error during authentication!");
+            }
+            if (!user) {
+                res.status(401).send("Not authenticated!");
+            }
+            if (allowedRoles.includes(user.role)) {
+                dbConnect
+                .collection("games")
+                .insertOne(req.body,
+                    function (err, result) {
+                        if (err || !result) {
+                            res.status(400).send("Error creating game!");
+                        } else {
+                            res.json(result);
+                        }
+                    });
+            }
+            else{
+                res.status(403).send("Not authorize!");
+            }
+        })(req, res, next);
     });
     /**
      * @swagger
@@ -316,21 +353,34 @@ module.exports = (router, passport) => {
      *             schema:
      *               $ref: '#/definitions/Game'
      */
-    router.route("/api/v1/games/:id").put(async function (req, res) {
+    router.route("/api/v1/games/:id").put(async function (req, res, next) {
         const dbConnect = dbo.getDb();
+        let key = req.headers.authorization;
 
-        dbConnect
-            .collection("games")
-            .updateOne({ "_id": ObjectId(req.params.id) }, { $set: req.body },
-                function (err, result) {
-                    if (err || !result) {
-                        res.status(400).send("Error deleting game!");
-                    } else {
-                        res.json(result);
-                    }
-                });
+        passport.authenticate("bearer", (err, user, info) => {
+            if (err) {
+                res.status(400).send("Error during authentication!");
+            }
+            if (!user) {
+                res.status(401).send("Not authenticated!");
+            }
+            if (allowedRoles.includes(user.role)) {
+                dbConnect
+                .collection("games")
+                .updateOne({ "_id": ObjectId(req.params.id) }, { $set: req.body },
+                    function (err, result) {
+                        if (err || !result) {
+                            res.status(400).send("Error deleting game!");
+                        } else {
+                            res.json(result);
+                        }
+                    });
+            }
+            else{
+                res.status(403).send("Not authorize!");
+            }
+        })(req, res, next);
     });
-
 
 }
 

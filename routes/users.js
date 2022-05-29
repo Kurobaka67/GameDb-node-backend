@@ -10,7 +10,6 @@ function decodeBasicAuthentification(key) {
     return {email: token[0], password: sha256(token[1]).toUpperCase()};
 }
 function loginFilter(body) {
-    
     var filter = {};
     if(body.email){
         filter.email = body.email;
@@ -27,6 +26,7 @@ function loginFilter(body) {
     return filter;
 }
 
+const allowedRoles = ['Admin', 'Contributor'];
 module.exports = (router, passport) => {
     // recordRoutes is an instance of the express router.
     // We use it to define our routes.
@@ -41,22 +41,26 @@ module.exports = (router, passport) => {
      *   NewUser:
      *      type: object
      *      properties:
-     *          name:
+     *          identifiant:
      *             type: string
-     *             description: User's title
-     *             example: PC
-     *          image:
+     *             description: User's identifiant
+     *             example: Kurobaka
+     *          email:
      *              type: string
-     *              description: image url of the User
-     *              example: http://urlimage.jpg
-     *          date:
+     *              description: User's email
+     *              example: kurobaka@game.com
+     *          password:
      *              type: string
-     *              description: User's release date
-     *              example: 2000-04-15
-     *          description:
+     *              description: User's password in sha256
+     *              example: aa
+     *          role:
      *              type: string
-     *              description: User's description
-     *              example: "This User, ..."
+     *              description: User's role
+     *              example: Admin
+     *          icon:
+     *              type: string
+     *              description: User's icon
+     *              example: 
      *   User:
      *      allOf:
      *          - properties:
@@ -83,19 +87,34 @@ module.exports = (router, passport) => {
      *             schema:
      *               $ref: '#/definitions/User'
      */
-    router.route("/api/v1/users").get(async function (req, res) {
+    router.route("/api/v1/users").get(async function (req, res, next) {
         const dbConnect = dbo.getDb();
+        let key = req.headers.authorization;
         
-        dbConnect
-        .collection("users")
-        .find()
-        .toArray(function (err, result) {
-            if (err || !result) {
-            res.status(400).send("Error fetching User!");
-        } else {
-            res.json(result);
+        passport.authenticate("bearer", (err, user, info) => {
+            if (err) {
+                res.status(400).send("Error during authentication!");
             }
-        });
+            if (!user) {
+                res.status(401).send("Not authenticated!");
+            }
+            dbConnect
+            .collection("users")
+            .find()
+            .toArray(function (err, result) {
+                if (err || !result) {
+                    res.status(400).send("Error fetching User!");
+                } else {
+                    if (user.role == 'Admin') {
+                        res.json(result);
+                    }
+                    else{
+                        res.status(403).send("Not authorize!");
+                    }
+                }
+            });
+        
+        })(req, res, next);
     });
 
     /**
@@ -137,6 +156,7 @@ module.exports = (router, passport) => {
     router.route("/api/v1/users/login").post(async function (req, res) {
         const dbConnect = dbo.getDb();
         const filter = loginFilter(req.body);
+        
         //const filter = decodeBasicAuthentification(req.headers.authorization);
 
         if(filter){
@@ -144,14 +164,13 @@ module.exports = (router, passport) => {
             .collection("users")
             .find(filter)
             .toArray(function(err, result){
-                console.log(result);
                 if(err){
                     res.send(err);
                 }
                 else{
                     if(result.length > 0){
                         const user = result[0];
-                        user.key = uuidv4()
+                        user.key = uuidv4();
                         dbConnect
                         .collection("users")
                         .updateOne({"_id": user._id}, {$set: user},
@@ -199,19 +218,34 @@ module.exports = (router, passport) => {
      *             schema:
      *               $ref: '#/definitions/User'
      */
-    router.route("/api/v1/users/:id").get(async function (req, res) {
+    router.route("/api/v1/users/:id").get(async function (req, res, next) {
         const dbConnect = dbo.getDb();
-    
-        dbConnect
-        .collection("users")
-        .findOne({"_id": ObjectId(req.params.id)},
-        function (err, result) {
-            if (err || !result) {
-            res.status(400).send("Error fetching User!");
-        } else {
-            res.json(result);
+        let key = req.headers.authorization;
+        
+        passport.authenticate("bearer", (err, user, info) => {
+            if (err) {
+                res.status(400).send("Error during authentication!");
             }
-        });
+            if (!user) {
+                res.status(401).send("Not authenticated!");
+            }
+            dbConnect
+            .collection("users")
+            .findOne({"_id": ObjectId(req.params.id)},
+            function (err, result) {
+                if (err || !result) {
+                    res.status(400).send("Error fetching User!");
+                } else {
+                    if (user.role == 'Admin' || user.email == result.email) {
+                        res.json(result);
+                    }
+                    else{
+                        res.status(403).send("Not authorize!");
+                    }
+                }
+            });
+            
+        })(req, res, next);
     });
     /**
      * @swagger
@@ -235,19 +269,33 @@ module.exports = (router, passport) => {
      *          application/json:
      *             schema: 
      */
-    router.route("/api/v1/users/:id").delete(async function (req, res) {
+    router.route("/api/v1/users/:id").delete(async function (req, res, next) {
         const dbConnect = dbo.getDb();
-    
-        dbConnect
-        .collection("users")
-        .deleteOne({"_id": ObjectId(req.params.id)},
-        function (err, result) {
-        if (err || !result) {
-            res.status(400).send("Error deleting User!");
-        } else {
-            res.json(result);
-        }
-        });
+        let key = req.headers.authorization;
+        
+        passport.authenticate("bearer", (err, user, info) => {
+            if (err) {
+                res.status(400).send("Error during authentication!");
+            }
+            if (!user) {
+                res.status(401).send("Not authenticated!");
+            }
+            if (user.role == 'Admin') {
+                dbConnect
+                .collection("users")
+                .deleteOne({"_id": ObjectId(req.params.id)},
+                function (err, result) {
+                if (err || !result) {
+                    res.status(400).send("Error deleting User!");
+                } else {
+                    res.json(result);
+                }
+                });
+            }
+            else{
+                res.status(403).send("Not authorize!");
+            }
+        })(req, res, next);
     });
     /**
      * @swagger
@@ -314,22 +362,38 @@ module.exports = (router, passport) => {
      *             schema:
      *               $ref: '#/definitions/User'
      */
-    router.route("/api/v1/users/:id").put(async function (req, res) {
+    router.route("/api/v1/users/:id").put(async function (req, res, next) {
         const dbConnect = dbo.getDb();
-
-        dbConnect
-        .collection("users")
-        .updateOne({"_id": ObjectId(req.params.id)}, {$set: req.body},
-        function (err, result) {
-        if (err || !result) {
-            res.status(400).send("Error updating User!");
-        } else {
-            res.json(result);
-        }
-        });
+        let key = req.headers.authorization;
+        console.log(req.body);
+        delete req.body._id;
+        
+        passport.authenticate("bearer", (err, user, info) => {
+            if (err) {
+                res.status(400).send("Error during authentication!");
+            }
+            if (!user) {
+                res.status(401).send("Not authenticated!");
+            }
+            dbConnect
+            .collection("users")
+            .updateOne({"_id": ObjectId(req.params.id)}, {$set: req.body},
+            function (err, result) {
+                console.log(err);
+                if (err || !result) {
+                    res.status(400).send("Error updating User!");
+                } else {
+                    if (user.role == 'Admin' || user.email == result.email) {
+                        req.body._id = req.params.id;
+                        res.json(req.body);
+                    }
+                    else{
+                        res.status(403).send("Not authorize!");
+                    }
+                }
+            });
+        
+        })(req, res, next);
     });
 
-    
-
-    
 }

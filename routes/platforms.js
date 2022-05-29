@@ -20,6 +20,7 @@ function sortedBy(query){
     return sort;
 }
 
+const allowedRoles = ['Admin', 'Contributor'];
 module.exports = (router, passport) => {
     // recordRoutes is an instance of the express router.
     // We use it to define our routes.
@@ -188,19 +189,33 @@ module.exports = (router, passport) => {
      *          application/json:
      *             schema: 
      */
-    router.route("/api/v1/platforms/:id").delete(async function (req, res) {
+    router.route("/api/v1/platforms/:id").delete(async function (req, res, next) {
         const dbConnect = dbo.getDb();
-    
-        dbConnect
-        .collection("platforms")
-        .deleteOne({"_id": ObjectId(req.params.id)},
-        function (err, result) {
-        if (err || !result) {
-            res.status(400).send("Error deleting platform!");
-        } else {
-            res.json(result);
-        }
-        });
+        let key = req.headers.authorization;
+        
+        passport.authenticate("bearer", (err, user, info) => {
+            if (err) {
+                res.status(400).send("Error during authentication!");
+            }
+            if (!user) {
+                res.status(401).send("Not authenticated!");
+            }
+            if (user.role == 'Admin') {
+                dbConnect
+                .collection("platforms")
+                .deleteOne({"_id": ObjectId(req.params.id)},
+                function (err, result) {
+                if (err || !result) {
+                    res.status(400).send("Error deleting platform!");
+                } else {
+                    res.json(result);
+                }
+                });
+            }
+            else{
+                res.status(403).send("Not authorize!");
+            }
+        })(req, res, next);
     });
     /**
      * @swagger
@@ -224,19 +239,33 @@ module.exports = (router, passport) => {
      *             schema:
      *               $ref: '#/definitions/Platform'
      */
-    router.route("/api/v1/platforms").post(async function (req, res) {
+    router.route("/api/v1/platforms").post(async function (req, res, next) {
         const dbConnect = dbo.getDb();
-    
-        dbConnect
-        .collection("platforms")
-        .insertOne(req.body,
-        function (err, result) {
-        if (err || !result) {
-            res.status(400).send("Error deleting platform!");
-        } else {
-            res.json(result);
-        }
-        });
+        let key = req.headers.authorization;
+        
+        passport.authenticate("bearer", (err, user, info) => {
+            if (err) {
+                res.status(400).send("Error during authentication!");
+            }
+            if (!user) {
+                res.status(401).send("Not authenticated!");
+            }
+            if (allowedRoles.includes(user.role)) {
+                dbConnect
+                .collection("platforms")
+                .insertOne(req.body,
+                function (err, result) {
+                if (err || !result) {
+                    res.status(400).send("Error deleting platform!");
+                } else {
+                    res.json(result);
+                }
+                });
+            }
+            else{
+                res.status(403).send("Not authorize!");
+            }
+        })(req, res, next);
     });
     /**
      * @swagger
@@ -267,20 +296,32 @@ module.exports = (router, passport) => {
      *             schema:
      *               $ref: '#/definitions/Platform'
      */
-    router.route("/api/v1/platforms/:id").put(async function (req, res) {
+    router.route("/api/v1/platforms/:id").put(async function (req, res, next) {
         const dbConnect = dbo.getDb();
-
-        dbConnect
-        .collection("platforms")
-        .updateOne({"_id": ObjectId(req.params.id)}, {$set: req.body},
-        function (err, result) {
-        if (err || !result) {
-            res.status(400).send("Error deleting platform!");
-        } else {
-            res.json(result);
-        }
-        });
+        let key = req.headers.authorization;
+        
+        passport.authenticate("bearer", (err, user, info) => {
+            if (err) {
+                res.status(400).send("Error during authentication!");
+            }
+            if (!user) {
+                res.status(401).send("Not authenticated!");
+            }
+            if (allowedRoles.includes(user.role)) {
+                dbConnect
+                .collection("platforms")
+                .updateOne({"_id": ObjectId(req.params.id)}, {$set: req.body},
+                function (err, result) {
+                if (err || !result) {
+                    res.status(400).send("Error deleting platform!");
+                } else {
+                    res.json(result);
+                }
+                });
+            }
+            else{
+                res.status(403).send("Not authorize!");
+            }
+        })(req, res, next);
     });
-
-    
 }
