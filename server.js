@@ -11,7 +11,7 @@ const dbo = require('./db/conn.js')
 passport.use(new Strategy(
   function(token, cb) {
     const dbConnect = dbo.getDb();
-    dbConnect.collection('users').findOne({token: token}, function(err, user) {
+    dbConnect.collection('users').findOne({key: token}, function(err, user) {
       if (err) { return cb(err); }
       if (!user) { return cb(null, false); }
       return cb(null, user);
@@ -65,7 +65,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(cors(corsOptions));
 //app.use(cookieParser());
 //app.use(session({secret: "Shh, its a secret!"}));
-app.use(bodyParser.json());
+//app.use(bodyParser.json({ limit: '1mb'}));
+app.use(express.json({limit: '1mb'}));
+app.use(express.urlencoded({limit: '50mb', extended: true, parameterLimit: 50000}));
 dbo.connectToServer(console.log)
 
 app.get('/', (req, res) => {
