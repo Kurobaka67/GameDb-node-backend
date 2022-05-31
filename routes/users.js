@@ -365,7 +365,6 @@ module.exports = (router, passport) => {
     router.route("/api/v1/users/:id").put(async function (req, res, next) {
         const dbConnect = dbo.getDb();
         let key = req.headers.authorization;
-        console.log(req.body);
         delete req.body._id;
         
         passport.authenticate("bearer", (err, user, info) => {
@@ -379,11 +378,10 @@ module.exports = (router, passport) => {
             .collection("users")
             .updateOne({"_id": ObjectId(req.params.id)}, {$set: req.body},
             function (err, result) {
-                console.log(err);
                 if (err || !result) {
                     res.status(400).send("Error updating User!");
                 } else {
-                    if (user.role == 'Admin' || user.email == result.email) {
+                    if (user.role == 'Admin' || user.email == req.body.email) {
                         req.body._id = req.params.id;
                         res.json(req.body);
                     }
