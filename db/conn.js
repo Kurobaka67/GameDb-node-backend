@@ -1,5 +1,8 @@
+const config = require('config');
+const port = config.get('mongo.port');
+const host = config.get('mongo.host');
 const { MongoClient } = require("mongodb");
-const connectionString = "mongodb://localhost:27017";
+const connectionString = `mongodb://${host}:${port}`;
 const client = new MongoClient(connectionString, {
   useNewUrlParser: true,
   useUnifiedTopology: true,

@@ -10,9 +10,13 @@ SCRIPT
 
 Vagrant.configure("2") do |config|
     config.vm.box = "ubuntu/focal64"
-    config.vm.provision "docker" do |d|
-        d.build_image "/vagrant"
+#    config.vm.synced_folder ".", "/vagrant"
+    config.vm.network "forwarded_port", guest: 3000, host: 3000
+    config.vm.provision "docker" 
+#    do |d|
+#        d.build_image "/vagrant"
 #    config.vm.provision "shell",
 #        inline: $script
-    end
+#    end
+    config.vm.provision :docker_compose, yml: "/vagrant/GameDb.yml", run: "always"
 end

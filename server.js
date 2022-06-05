@@ -4,6 +4,11 @@ const swaggerJSDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const passport = require('passport');
 const Strategy = require('passport-http-bearer').Strategy;
+const config = require('config');
+const port = config.get('server.port');
+const host = config.get('server.host');
+const webAppPort = config.get('webapp.port');
+const webAppHost = config.get('webapp.host');
 const dbo = require('./db/conn.js')
 //const cookieParser = require('cookie-parser');
 //const session = require('express-session');
@@ -19,7 +24,6 @@ passport.use(new Strategy(
   }));
 
 const app = express()
-const port = 3000
 
 const router = express.Router();
 const bodyParser = require('body-parser');
@@ -42,7 +46,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: 'http://localhost:3000',
+      url: `http://${host}:${port}`,
       description: 'Development server',
     },
   ],
@@ -57,7 +61,7 @@ const options = {
 const swaggerSpec = swaggerJSDoc(options);
 
 const corsOptions = {
-  origin: 'http://localhost:8080',
+  origin: `http://${webAppHost}:${webAppPort}`,
   credentials : true
 }
 
@@ -81,6 +85,6 @@ require('./routes/users')(router, passport);
 app.use(router);
 
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
+app.listen(port, host, () => {
+  console.log(`Example app listening on host ${host} and port ${port}`)
 })
